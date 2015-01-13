@@ -167,6 +167,26 @@ tryCard gs = do
 					else
 						return gs
 
+playGame :: GameState -> IO ()
+playGame gs = do
+	gs' <- tryCard gs
+	playGame gs'
+
+playGamePrompt :: GameState -> IO GameState
+playGamePrompt gs = do
+	gs' <- tryCard gs
+	putStr "Coninue? "
+	cont <- getChar
+	putStrLn ""
+	if cont == 'y'
+		then playGamePrompt gs'
+		else return gs'
+
+buildGameState :: [Card] -> [Probability] -> IO GameState
+buildGameState cs ps = do
+	firstBucket <- foldM (flip insert) Empty cs
+	return ([firstBucket] ++ replicate (length ps - 1) Empty, ps)
+
 testCard :: Int -> Card
 testCard n = (n, do
 	putStr $ "Card " ++ show n ++ ", Enter 'y': "
@@ -175,6 +195,4 @@ testCard n = (n, do
 	return $ response == 'y')
 
 testGame :: Int -> IO GameState
-testGame n = do
-	firstBucket <- foldM (flip insert) Empty $ map testCard [1..n]
-	return ([firstBucket, Empty, Empty], [0.75, 0.2, 0.05])
+testGame n = buildGameState (map testCard [1..n]) [0.75, 0.2, 0.05]

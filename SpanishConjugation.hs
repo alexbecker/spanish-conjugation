@@ -3,6 +3,9 @@ module Main where
 import Data.Tuple
 import Data.Maybe
 import Data.List
+import Control.Monad
+import System.IO
+import SpacedRepetition
 
 type Verb = String
 
@@ -25,6 +28,10 @@ data Person = Yo
 	deriving (Read, Show)
 
 type StemChange = Char -> Maybe String
+
+allTenses = [Present, PresentProgressive, Preterite, Imperfect]
+
+allPersons = [Yo, Tu, El, Nosotros, Vosotros, Ellos]
 
 irregular :: Verb -> Tense -> Bool
 irregular "ser" _ = True
@@ -189,6 +196,8 @@ conjugate v t = if isStemChange v
 
 test :: Verb -> Tense -> Person -> IO Bool
 test v t p = do
+	putStr $ show p ++ ": "
+	hFlush stdout
 	attempt <- getLine
 	let correct = conjugate v t p
 	if attempt == correct
@@ -196,9 +205,25 @@ test v t p = do
 		else
 			putStrLn correct >> return False
 
+testAllPersons :: Verb -> Tense -> IO Bool
+testAllPersons v t = do
+	putStrLn $ "Conjugate '" ++ v ++ "' in " ++ show t
+	attempts <- sequence $ map (test v t) allPersons
+	if and attempts
+		then return True
+		else return False
+
 main :: IO ()
 main = do
-	v <- getLine
-	t <- getLine
-	p <- getLine
-	test v (read t) (read p) >> return ()
+	putStrLn "Enter probabilities, seperated by spaces: "
+	probStr <- getLine
+	let probs = map read $ words probStr
+	putStrLn "Enter verbs, seperated by spaces: "
+	verbStr <- getLine
+	let verbs = words verbStr
+	putStrLn "Enter tense: "
+	tenseStr <- getLine
+	let tense = read tenseStr
+	let cards = zip [1..length verbs] $ map (flip testAllPersons tense) verbs
+	gs <- buildGameState cards probs
+	playGame gs
