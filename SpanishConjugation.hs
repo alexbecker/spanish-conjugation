@@ -33,21 +33,21 @@ data StemChange = EtoIE
 				| UtoUE
 				| EtoI
 
-data SpanishCard = SpanishCard Int Verb Tense
+data VerbCard = VerbCard Int Verb Tense
 	deriving (Show, Read, Eq)
 
----- Extractors for SpanishCard (other than getId) ----
+---- Extractors for VerbCard (other than getId) ----
 
-getVerb :: SpanishCard -> Verb
-getVerb (SpanishCard _ v _) = v
+getVerb :: VerbCard -> Verb
+getVerb (VerbCard _ v _) = v
 
-getTense :: SpanishCard -> Tense
-getTense (SpanishCard _ _ t) = t
+getTense :: VerbCard -> Tense
+getTense (VerbCard _ _ t) = t
 
 ---- Interaction functions ----
 
-testSinglePerson :: SpanishCard -> Person -> IO Bool
-testSinglePerson (SpanishCard _ v t) p = do
+testSinglePerson :: VerbCard -> Person -> IO Bool
+testSinglePerson (VerbCard _ v t) p = do
 	putStr $ show p ++ ": "
 	hFlush stdout
 	attempt <- getLine
@@ -60,8 +60,8 @@ testSinglePerson (SpanishCard _ v t) p = do
 -- Ignore Vosotros for now
 allPersons = [Yo, Tu, El, Nosotros, Ellos]
 
-instance Card SpanishCard where
-	getId (SpanishCard i _ _) = i
+instance Card VerbCard where
+	getId (VerbCard i _ _) = i
 	getAction card = do
 		putStrLn $ "Conjugate '" ++ getVerb card ++ "' in " ++ show (getTense card)
 		attempts <- sequence $ map (testSinglePerson card) allPersons
@@ -164,22 +164,18 @@ conjugate v t p = parseSpanish $ if irregular v t
 
 main :: IO ()
 main = do
-	putStrLn "Enter savefile, or blank to skip: "
-	filename <- getLine
-	gs <- if filename /= ""
-		then loadState filename
+	maybegs <- maybeLoadState
+	gs <- if isJust maybegs
+		then return $ fromJust maybegs
 		else do
-			putStrLn "Enter probabilities, seperated by spaces: "
-			probStr <- getLine
-			let probs = map read $ words probStr
+			probs <- promptProbabilities
 			putStrLn "Enter verbs, seperated by spaces: "
 			verbStr <- getLine
 			let verbs = words $ parseSpanish verbStr
 			putStrLn "Enter tense: "
 			tenseStr <- getLine
 			let tense = read tenseStr
-			let cards = [SpanishCard i v tense | (i, v) <- zip [1..length verbs] verbs]
-			return $ buildGameState cards probs
+			return $ buildGameState [VerbCard i v tense | (i, v) <- zip [1..length verbs] verbs] probs
 	playGamePrompt gs
 
 ---- Conjugation data ----

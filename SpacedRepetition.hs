@@ -141,7 +141,8 @@ tryCard :: (Card a) => GameState a -> IO (GameState a)
 tryCard gs = do
 	let buckets = fst gs
 	-- renormalize probabilities
-	let probsDenormalized = map (uncurry (*)) $ zip (map (fromIntegral . numChildren) buckets) $ snd gs
+	let origProbs = snd gs
+	let probsDenormalized = map (uncurry (*)) $ zip (map (fromIntegral . numChildren) buckets) origProbs
 	let normFactor = sum probsDenormalized
 	let probs = map (/ normFactor) probsDenormalized
 	-- get bucket
@@ -160,12 +161,12 @@ tryCard gs = do
 				then do
 					let oldBucket = delete randCard bucket
 					newBucket <- insert randCard $ buckets !! (index + 1)
-					return $ (take index buckets ++ [oldBucket, newBucket] ++ drop (index + 2) buckets, probs)
+					return $ (take index buckets ++ [oldBucket, newBucket] ++ drop (index + 2) buckets, origProbs)
 				else if not correct && index > 0
 					then do
 						let oldBucket = delete randCard bucket
 						newBucket <- insert randCard $ buckets !! 0
-						return $ ([newBucket] ++ tail (take index buckets) ++ [oldBucket] ++ drop (index + 1) buckets, probs)
+						return $ ([newBucket] ++ tail (take index buckets) ++ [oldBucket] ++ drop (index + 1) buckets, origProbs)
 					else
 						return gs
 
@@ -202,6 +203,23 @@ loadState :: (Card a) => FilePath -> IO (GameState a)
 loadState fp = do
 	fileContents <- readFile fp
 	return $ read fileContents
+
+promptProbabilities :: IO [Probability]
+promptProbabilities = do
+	putStrLn "Enter probabilities, seperated by spaces: "
+	probStr <- getLine
+	return $ map read $ words probStr
+
+-- prompts user for savefile, or none
+maybeLoadState :: (Card a) => IO (Maybe (GameState a))
+maybeLoadState = do
+	putStrLn "Enter savefile, or blank to skip: "
+	savefile <- getLine
+	if savefile /= ""
+		then do
+			state <- loadState savefile
+			return $ Just state
+		else return Nothing
 
 -- Test functions
 

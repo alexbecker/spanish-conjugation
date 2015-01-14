@@ -1,5 +1,6 @@
 module Main where
 
+import Data.Maybe
 import System.Random
 import System.IO
 import System.Exit
@@ -45,16 +46,13 @@ loadVocab fp = do
 
 main :: IO ()
 main = do
-	putStrLn "Enter savefile, or blank to skip: "
-	savefile <- getLine
-	gs <- if savefile /= ""
-		then loadState savefile
+	maybegs <- maybeLoadState
+	gs <- if isJust maybegs
+		then return $ fromJust maybegs
 		else do
+			probs <- promptProbabilities
 			putStrLn "Enter vocab file: "
 			vocabfile <- getLine
 			cards <- loadVocab vocabfile
-			putStrLn "Enter probabilities, seperated by spaces: "
-			probStr <- getLine
-			let probs = map read $ words probStr
 			return $ buildGameState cards probs
 	playGamePrompt gs
