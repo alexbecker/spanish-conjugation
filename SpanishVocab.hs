@@ -2,9 +2,7 @@ module Main where
 
 import Data.Maybe
 import Data.Tuple
-import System.Random
 import System.IO
-import System.Exit
 import SpacedRepetition
 import SpanishParse
 

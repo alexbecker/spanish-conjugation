@@ -47,16 +47,14 @@ bmax (Leaf a) = a
 bmax (Node _ _ _ _ b) = bmax b
 
 secondMaxId :: (Card a) => Bucket a -> Int
-secondMaxId (Node _ _ _ a (Leaf b)) = getId $ bmax a
-secondMaxId (Node _ _ _ _ b) = secondMaxId b
+secondMaxId = (!! 1) . reverse . idList
 
 bmin :: Bucket a -> a
 bmin (Leaf a) = a
 bmin (Node _ _ _ a _) = bmin a
 
 secondMinId :: (Card a) => Bucket a -> Int
-secondMinId (Node _ _ _ (Leaf a) b) = getId $ bmax b
-secondMinId (Node _ _ _ a _) = secondMinId a
+secondMinId = (!! 1) . idList
 
 idList :: (Card a) => Bucket a -> [Int]
 idList Empty = []
@@ -179,9 +177,8 @@ playGamePrompt :: (Card a) => GameState a -> IO ()
 playGamePrompt gs = do
 	gs' <- tryCard gs
 	putStr "Coninue (y/n)? "
-	hFlush stdout
 	cont <- getChar
-	getLine	-- chew newline
+	putStrLn ""
 	if cont == 'y'
 		then playGamePrompt gs'
 		else saveState gs'
@@ -229,7 +226,7 @@ data TestCard = TestCard Int
 instance Card TestCard where
 	getId (TestCard i) = i
 	getAction (TestCard i) = do
-		putStr $ "Card " ++ show i ++ ", Enter 'y': "
+		putStr $ "Card " ++ show i ++ ", (y/n): "
 		response <- getChar
 		putStrLn ""
 		return $ response == 'y'
@@ -245,3 +242,27 @@ testDelete n = do
 
 testGame :: Int -> GameState TestCard
 testGame n = buildGameState (map TestCard [1..n]) [0.75, 0.2, 0.05]
+
+verbosePlayGame :: (Card a) => GameState a -> IO ()
+verbosePlayGame gs = do
+	putStrLn $ show gs
+	gs' <- tryCard gs
+	verbosePlayGame gs'
+
+-- Deletes have been causing a bug
+
+data RandCard = RandCard Int
+	deriving (Show, Read)
+
+instance Card RandCard where
+	getId (RandCard i) = i
+	getAction _ = do
+		randInt <- getStdRandom $ randomR (0, 1)	:: IO Int
+		return $ if randInt == 0
+			then True
+			else False
+
+testDeleteBug :: Int -> IO ()
+testDeleteBug n = do
+	let gs = buildGameState (map RandCard [1..n]) [0.5, 0.5]
+	verbosePlayGame gs
