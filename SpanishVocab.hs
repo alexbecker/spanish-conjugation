@@ -1,32 +1,24 @@
 module Main where
 
 import Data.Maybe
+import Data.Tuple
 import System.Random
 import System.IO
 import System.Exit
 import SpacedRepetition
 import SpanishParse
 
--- Ordering is ID, spanish, english
+-- Ordering is ID, prompt, answer
 data VocabCard = VocabCard Int String String
 	deriving (Show, Read)
 
 instance Card VocabCard where
 	getId (VocabCard i _ _) = i
-	getAction (VocabCard _ sp en) = do
-		-- randomly select spanish->english or english->spanish
-		randInt <- getStdRandom $ randomR (0, 1) :: IO Int
-		if randInt == 0
-			then do
-				putStr sp
-				hFlush stdout
-				getLine
-				putStrLn en
-			else do
-				putStr en
-				hFlush stdout
-				getLine
-				putStrLn sp
+	getAction (VocabCard _ prompt ans) = do
+		putStr prompt
+		hFlush stdout
+		getLine
+		putStrLn ans
 		putStr "Correct (y/n)? "
 		hFlush stdout
 		answer <- getChar
@@ -41,8 +33,9 @@ instance Card VocabCard where
 loadVocab :: FilePath -> IO [VocabCard]
 loadVocab fp = do
 	fileContents <- readFile fp
-	let pairs = map ((break (== ';')) . parseSpanish) $ lines fileContents
-	return $ map (\(n,p) -> VocabCard n (fst p) $ drop 2 $ snd p) $ zip [1..length pairs] pairs
+	let spEnPairs = map ((\(x,y) -> (x, drop 2 y)) . (break (== ';')) . parseSpanish) $ lines fileContents
+	let allPairs = spEnPairs ++ map swap spEnPairs
+	return $ map (\(n,p) -> VocabCard n (fst p) (snd p)) $ zip [1..length allPairs] allPairs
 
 main :: IO ()
 main = do
