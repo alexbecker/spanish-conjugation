@@ -3,70 +3,70 @@ module SpacedRepetition where
 
 import Data.Tuple
 import Data.Maybe
-import Data.List (findIndex, (!!))
+import Data.List (find, findIndex, (!!))
 import System.Random
+import System.IO
 import Control.Monad
 
-type Card = (Int, IO Bool)	-- (Id, Question)
-
+class (Read a, Show a) => Card a where
+	getId :: a -> Int
+	getAction :: a -> IO Bool
+	
 -- Just an ordered tree
-data Bucket = Empty
-			| Leaf Card
-			| Node Int Int Int Bucket Bucket	-- (numChildren, leftMax, rightMin, left, right)
-
-instance Show Bucket where
-	show Empty = "Empty"
-	show (Leaf a) = show $ getId a
-	show (Node i j k a b) = "(" ++ show a ++ ") (" ++ show b ++ ")"
+data Bucket a = Empty
+			  | Leaf a
+			  | Node Int Int Int (Bucket a) (Bucket a)	-- (numChildren, leftMax, rightMin, left, right)
+	deriving (Show, Read)
 
 type Probability = Double
-type GameState = ([Bucket], [Probability])
+type GameState a = ([Bucket a], [Probability])
 
-getId :: Card -> Int
-getId (a, b) = a
+-- Basic functions for Bucket type
 
-isEmpty :: Bucket -> Bool
+isEmpty :: Bucket a -> Bool
 isEmpty Empty = True
 isEmpty _ = False
 
-isLeaf :: Bucket -> Bool
+isLeaf :: Bucket a -> Bool
 isLeaf (Leaf _) = True
 isLeaf _ = False
 
-numChildren :: Bucket -> Int
+numChildren :: Bucket a -> Int
 numChildren Empty = 0
 numChildren (Leaf _) = 1
 numChildren (Node i _ _ _ _) = i
 
-left :: Bucket -> Bucket
+left :: Bucket a -> Bucket a
 left (Node _ _ _ a _) = a
 
-right :: Bucket -> Bucket
+right :: Bucket a -> Bucket a
 right (Node _ _ _ _ b) = b
 
-bmax :: Bucket -> Card
+bmax :: Bucket a -> a
 bmax (Leaf a) = a
 bmax (Node _ _ _ _ b) = bmax b
 
-secondMaxId :: Bucket -> Int
+secondMaxId :: (Card a) => Bucket a -> Int
 secondMaxId (Node _ _ _ a (Leaf b)) = getId $ bmax a
 secondMaxId (Node _ _ _ _ b) = secondMaxId b
 
-bmin :: Bucket -> Card
+bmin :: Bucket a -> a
 bmin (Leaf a) = a
 bmin (Node _ _ _ a _) = bmin a
 
-secondMinId :: Bucket -> Int
+secondMinId :: (Card a) => Bucket a -> Int
 secondMinId (Node _ _ _ (Leaf a) b) = getId $ bmax b
 secondMinId (Node _ _ _ a _) = secondMinId a
 
-idList :: Bucket -> [Int]
+idList :: (Card a) => Bucket a -> [Int]
 idList Empty = []
 idList (Leaf a) = [getId a]
 idList (Node _ _ _ a b) = idList a ++ idList b
 
--- Average time O(log n)
-insert :: Card -> Bucket -> IO Bucket
+-- More complex functions for Bucket type
+-- All average time O(log n)
+
+insert :: (Card a) => a -> Bucket a -> IO (Bucket a)
 insert a Empty = return $ Leaf a
 insert a (Leaf x) = return $ if getId a < getId x
 	then Node 2 (getId a) (getId x) (Leaf a) (Leaf x)
@@ -89,12 +89,7 @@ insert a (Node i j k x y) = if getId a < j
 					rightSide <- insert a y
 					return $ Node (i + 1) j (getId a) x rightSide
 
-testInsert :: IO Bucket
-testInsert = do
-	foldM (flip insert) Empty $ map (\x -> (x, return True)) [1,8,7,4,2,10,5,6,3,9]
-
--- Average time O(log n)
-delete :: Card -> Bucket -> Bucket
+delete :: (Card a) => a -> Bucket a -> Bucket a
 delete a (Leaf x) = if getId a == getId x
 	then Empty
 	else undefined
@@ -121,13 +116,7 @@ delete a (Node i j k x y) = if getId a == j
 			then Node (i - 1) j k (delete a x) y
 			else Node (i - 1) j k x (delete a y)
 
-testDelete :: Int -> IO Bucket
-testDelete n = do 
-	x <- testInsert
-	return $ delete (n, return True) x
-
--- Draw random element
-drawRand :: Bucket -> IO Card
+drawRand :: (Card a) => Bucket a -> IO a
 drawRand (Leaf a) = return a
 drawRand (Node i _ _ x y) = do
 	randInt <- getStdRandom $ randomR (1, i) :: IO Int
@@ -135,10 +124,12 @@ drawRand (Node i _ _ x y) = do
 		then drawRand x
 		else drawRand y
 
-listGameState :: GameState -> ([[Int]], [Probability])
-listGameState gs = (map idList $ fst gs, snd gs)
+-- Rearrange [1..n] into the perfect order for above structure
+--TODO
 
-tryCard :: GameState -> IO GameState
+-- Functions for playing the game
+
+tryCard :: (Card a) => GameState a -> IO (GameState a)
 tryCard gs = do
 	let buckets = fst gs
 	let probs = snd gs
@@ -152,7 +143,7 @@ tryCard gs = do
 		else do
 			-- test user
 			randCard <- drawRand bucket
-			correct <- snd randCard
+			correct <- getAction randCard
 			-- change buckets
 			if correct && index + 1 < length buckets
 				then do
@@ -167,32 +158,48 @@ tryCard gs = do
 					else
 						return gs
 
-playGame :: GameState -> IO ()
+playGame :: (Card a) => GameState a -> IO ()
 playGame gs = do
 	gs' <- tryCard gs
 	playGame gs'
 
-playGamePrompt :: GameState -> IO GameState
+playGamePrompt :: (Card a) => GameState a -> IO (GameState a)
 playGamePrompt gs = do
 	gs' <- tryCard gs
-	putStr "Coninue? "
+	putStr "Coninue (y/n)? "
+	hFlush stdout
 	cont <- getChar
-	putStrLn ""
+	getLine	-- chew newline
 	if cont == 'y'
 		then playGamePrompt gs'
 		else return gs'
 
-buildGameState :: [Card] -> [Probability] -> IO GameState
+buildGameState :: (Card a) => [a] -> [Probability] -> IO (GameState a)
 buildGameState cs ps = do
 	firstBucket <- foldM (flip insert) Empty cs
 	return ([firstBucket] ++ replicate (length ps - 1) Empty, ps)
 
-testCard :: Int -> Card
-testCard n = (n, do
-	putStr $ "Card " ++ show n ++ ", Enter 'y': "
-	response <- getChar
-	putStrLn ""
-	return $ response == 'y')
+-- Test functions
 
-testGame :: Int -> IO GameState
-testGame n = buildGameState (map testCard [1..n]) [0.75, 0.2, 0.05]
+data TestCard = TestCard Int
+	deriving (Show, Read)
+
+instance Card TestCard where
+	getId (TestCard i) = i
+	getAction (TestCard i) = do
+		putStr $ "Card " ++ show i ++ ", Enter 'y': "
+		response <- getChar
+		putStrLn ""
+		return $ response == 'y'
+
+testInsert :: IO (Bucket TestCard)
+testInsert = do
+	foldM (flip insert) Empty $ map TestCard [1,8,7,4,2,10,5,6,3,9]
+
+testDelete :: Int -> IO (Bucket TestCard)
+testDelete n = do 
+	x <- testInsert
+	return $ delete (TestCard n) x
+
+testGame :: Int -> IO (GameState TestCard)
+testGame n = buildGameState (map TestCard [1..n]) [0.75, 0.2, 0.05]
