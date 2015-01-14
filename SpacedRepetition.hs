@@ -124,15 +124,26 @@ drawRand (Node i _ _ x y) = do
 		then drawRand x
 		else drawRand y
 
--- Rearrange [1..n] into the perfect order for above structure
---TODO
+-- Build a perfect bucket from a sorted list of cards
+
+buildBucket :: (Card a) => [a] -> Bucket a
+buildBucket [] = Empty
+buildBucket [c] = Leaf c
+buildBucket cs = Node (numChildren left + numChildren right) (getId $ bmax left) (getId $ bmin right) left right
+	where
+		splitcs = splitAt (quot (length cs) 2) cs
+		left = buildBucket $ fst splitcs
+		right = buildBucket $ snd splitcs
 
 -- Functions for playing the game
 
 tryCard :: (Card a) => GameState a -> IO (GameState a)
 tryCard gs = do
 	let buckets = fst gs
-	let probs = snd gs
+	-- renormalize probabilities
+	let probsDenormalized = map (uncurry (*)) $ zip (map (fromIntegral . numChildren) buckets) $ snd gs
+	let normFactor = sum probsDenormalized
+	let probs = map (/ normFactor) probsDenormalized
 	-- get bucket
 	randDouble <- getStdRandom $ randomR (0.0, 1.0) :: IO Double
 	let cumulativeProbs = scanl1 (+) probs
@@ -163,7 +174,7 @@ playGame gs = do
 	gs' <- tryCard gs
 	playGame gs'
 
-playGamePrompt :: (Card a) => GameState a -> IO (GameState a)
+playGamePrompt :: (Card a) => GameState a -> IO ()
 playGamePrompt gs = do
 	gs' <- tryCard gs
 	putStr "Coninue (y/n)? "
@@ -172,12 +183,25 @@ playGamePrompt gs = do
 	getLine	-- chew newline
 	if cont == 'y'
 		then playGamePrompt gs'
-		else return gs'
+		else saveState gs'
 
-buildGameState :: (Card a) => [a] -> [Probability] -> IO (GameState a)
-buildGameState cs ps = do
-	firstBucket <- foldM (flip insert) Empty cs
-	return ([firstBucket] ++ replicate (length ps - 1) Empty, ps)
+buildGameState :: (Card a) => [a] -> [Probability] -> GameState a
+buildGameState cs ps = (buildBucket cs : replicate (length ps - 1) Empty, ps)
+
+-- Saving state
+
+saveState :: (Card a) => GameState a -> IO ()
+saveState gs = do
+	putStrLn "Enter savefile, or blank to skip: "
+	filename <- getLine
+	if filename == ""
+		then return ()
+		else writeFile filename $ show gs
+
+loadState :: (Card a) => FilePath -> IO (GameState a)
+loadState fp = do
+	fileContents <- readFile fp
+	return $ read fileContents
 
 -- Test functions
 
@@ -201,5 +225,5 @@ testDelete n = do
 	x <- testInsert
 	return $ delete (TestCard n) x
 
-testGame :: Int -> IO (GameState TestCard)
+testGame :: Int -> GameState TestCard
 testGame n = buildGameState (map TestCard [1..n]) [0.75, 0.2, 0.05]
