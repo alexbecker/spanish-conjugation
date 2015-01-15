@@ -5,8 +5,8 @@ import Data.Tuple
 import Data.Maybe
 import Data.List (find, findIndex, (!!))
 import System.Random
-import System.IO
 import Control.Monad
+import ImmediateIO
 
 class (Read a, Show a) => Card a where
 	getId :: a -> Int
@@ -176,9 +176,8 @@ playGame gs = do
 playGamePrompt :: (Card a) => GameState a -> IO ()
 playGamePrompt gs = do
 	gs' <- tryCard gs
-	putStr "Coninue (y/n)? "
-	cont <- getChar
-	putStrLn ""
+	putStrImmediate "Coninue (y/n)? "
+	cont <- getCharImmediate
 	if cont == 'y'
 		then playGamePrompt gs'
 		else saveState gs'
@@ -190,7 +189,7 @@ buildGameState cs ps = (buildBucket cs : replicate (length ps - 1) Empty, ps)
 
 saveState :: (Card a) => GameState a -> IO ()
 saveState gs = do
-	putStrLn "Enter savefile, or blank to skip: "
+	putStrImmediate "Enter savefile, or blank to skip: "
 	filename <- getLine
 	if filename == ""
 		then return ()
@@ -203,14 +202,14 @@ loadState fp = do
 
 promptProbabilities :: IO [Probability]
 promptProbabilities = do
-	putStrLn "Enter probabilities, seperated by spaces: "
+	putStrImmediate "Enter probabilities, seperated by spaces: "
 	probStr <- getLine
 	return $ map read $ words probStr
 
 -- prompts user for savefile, or none
 maybeLoadState :: (Card a) => IO (Maybe (GameState a))
 maybeLoadState = do
-	putStrLn "Enter savefile, or blank to skip: "
+	putStrImmediate "Enter savefile, or blank to skip: "
 	savefile <- getLine
 	if savefile /= ""
 		then do
@@ -226,9 +225,8 @@ data TestCard = TestCard Int
 instance Card TestCard where
 	getId (TestCard i) = i
 	getAction (TestCard i) = do
-		putStr $ "Card " ++ show i ++ ", (y/n): "
-		response <- getChar
-		putStrLn ""
+		putStrImmediate $ "Card " ++ show i ++ ", (y/n): "
+		response <- getCharImmediate
 		return $ response == 'y'
 
 testInsert :: IO (Bucket TestCard)

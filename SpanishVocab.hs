@@ -2,9 +2,9 @@ module Main where
 
 import Data.Maybe
 import Data.Tuple
-import System.IO
 import SpacedRepetition
 import SpanishParse
+import ImmediateIO
 
 -- Ordering is ID, prompt, answer
 data VocabCard = VocabCard Int String String
@@ -13,14 +13,11 @@ data VocabCard = VocabCard Int String String
 instance Card VocabCard where
 	getId (VocabCard i _ _) = i
 	getAction (VocabCard _ prompt ans) = do
-		putStr prompt
-		hFlush stdout
+		putStrImmediate prompt
 		getLine
 		putStrLn ans
-		putStr "Correct (y/n)? "
-		hFlush stdout
-		answer <- getChar
-		getLine	-- chew newline
+		putStrImmediate "Correct (y/n)? "
+		answer <- getCharImmediate
 		if answer == 'y'
 			then return True
 			else return False
@@ -42,7 +39,7 @@ main = do
 		then return $ fromJust maybegs
 		else do
 			probs <- promptProbabilities
-			putStrLn "Enter vocab file: "
+			putStrImmediate "Enter vocab file: "
 			vocabfile <- getLine
 			cards <- loadVocab vocabfile
 			return $ buildGameState cards probs
