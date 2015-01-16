@@ -77,7 +77,7 @@ isStemChange :: Verb -> Bool
 isStemChange = isJust . getStemChange
 
 -- given multiple choices, final vowel is changed
-applyStemChange :: Verb -> Tense -> Person -> String
+applyStemChange :: Verb -> Tense -> Person -> Verb
 applyStemChange v t p = (reverse $ take vowelNegIndex rev ++ reverse (actualchange vowel) ++ drop (vowelNegIndex + 1) rev) ++ ending
 	where
 		stemchange = fromJust $ getStemChange v
@@ -102,12 +102,22 @@ unpack cs p = cs !! case p of
 
 -- Final conjugation
 
-conjugate :: Verb -> Tense -> Person -> String
+getStem :: Verb -> Tense -> Person -> String
+getStem v t p = if isStemChange v
+	then regularStem $ applyStemChange v t p
+	else regularStem v
+
+getEnding :: Verb -> Tense -> Person -> String
+getEnding v t p = regularEnding v t p
+
+conjugate :: Verb -> Tense -> Person -> Verb
 conjugate v t p = parseSpanish $ if irregular v t
 	then irregularConjugate v t p
-	else if isStemChange v
-		then lastLetterRule (applyStemChange v t p) t p
-		else lastLetterRule v t p
+	else if t == Present && p == Yo && isGoVerb v
+		then goVerbStem v ++ getEnding v t p
+		else if t == Preterite && isPreteriteSemiregular v
+			then preteriteSemiregularStem v ++ preteriteSemiregularEnding p
+			else lastLetterRule v (getStem v t p) $ getEnding v t p
 
 ---- Main ----
 
@@ -132,12 +142,15 @@ main = do
 ---- Conjugation data ----
 
 knownPersons = [Yo, Tu, El, Nosotros, Ellos]
-knownVerbs = sort ["ser", "estar", "tener", "hacer", "poder", "decir", "ir", "dar", "saber", "querer", "llegar", "pasar", "deber", "poner", "parecer", "quedar", "creer", "hablar", "llevar", "dejar", "seguir", "encontrar", "llamar", "venir", "pensar", "salir", "volver", "tomar", "conocer", "vivir", "sentir", "tratar", "mirar", "contar", "empezar", "esperar", "buscar", "existir", "entrar", "trabajar", "escribir", "perder", "producir", "ocurrir", "entender", "pedir", "recibir", "recordar", "terminar", "permitir", "aperecer", "conseguir", "comenzar", "servir", "sacar", "necesitar", "resultar"]
+knownVerbs = sort ["ser", "estar", "tener", "hacer", "poder", "decir", "ir", "dar", "saber", "querer", "llegar", "pasar", "deber", "poner", "parecer", "quedar", "creer", "hablar", "llevar", "dejar", "seguir", "encontrar", "llamar", "venir", "pensar", "salir", "volver", "tomar", "conocer", "vivir", "sentir", "tratar", "mirar", "contar", "empezar", "esperar", "buscar", "existir", "entrar", "trabajar", "escribir", "perder", "producir", "ocurrir", "entender", "pedir", "recibir", "recordar", "terminar", "permitir", "aperecer", "conseguir", "comenzar", "servir", "sacar", "necesitar", "mantener", "resultar", "leer", "caer", "cambiar", "presentar", "crear", "abrir", "considerar", "oír", "acabar", "convertir", "ganar", "formar", "traer", "partir", "morir", "aceptar", "realizar", "suponer", "comprender", "lograr", "explicar"]
 
 -- (UNIFORM) Regular verb handling
 
-regularConjugate :: Verb -> Tense -> Person -> String
-regularConjugate v t = (stem ++) . case t of 
+regularStem :: Verb -> Verb
+regularStem = init . init
+
+regularEnding :: Verb -> Tense -> Person -> String
+regularEnding v t = case t of 
 	Present -> case ending of
 		"ar" -> unpack ["o", "as", "a", "amos", "áis", "an"]
 		"er" -> unpack ["o", "es", "e", "emos", "éis", "en"]
@@ -149,41 +162,45 @@ regularConjugate v t = (stem ++) . case t of
 		then unpack ["aba", "abas", "aba", "ábamos", "abais", "aban"]
 		else unpack ["ía", "ías", "ía", "íamos", "íais", "ían"]
 	where
-		stem = take (length v - 2) v
 		ending = drop (length v - 2) v
 
--- (UNIFORM) Last letter rules
+-- (UNIFORM) -go verbs
 
--- assumes any stem changes have been applied
-lastLetterRule :: Verb -> Tense -> Person -> Verb
-lastLetterRule v t p = if isJust replacement
-	then take (len - 3) conj ++ fromJust replacement ++ drop (len - 2) conj
-	else conj
-	where
-		len = length v
-		conj = regularConjugate v t p
-		preceding = conj !! (len - 4)
-		letter = conj !! (len - 3)
-		following = conj !! (len - 2)
-		replacement = case letter of
-			'z' -> if elem following "eé"
-				then Just "c"
-				else Nothing
-			'g' -> if elem following "eé"
-				then Just "gu"
-				else Nothing
-			'c' -> if elem preceding "aeiouáéíó" && elem following "aoáó"
-				then Just "zc"
-				else if preceding == 's' && elem following "eé"
-					then Just "qu"
-					else Nothing
-			'n' -> if elem preceding "aeiouáéíó" && elem following "aoáó"
-				then Just "ng"
-				else Nothing
-			'l' -> if elem preceding "aeiouáéíó" && elem following "oó"
-				then Just "lg"
-				else Nothing
-			_ -> Nothing
+isGoVerb :: Verb -> Bool
+isGoVerb v = v !! (length v - 3) == 'n' && v !! (length v - 2) /= 'a'
+
+goVerbStem :: Verb -> Verb
+goVerbStem = (++ "g") . regularStem
+
+-- (UNIFORM) Preserving sounds when vowels change hardness
+
+hardVowels = "aouáó"
+softVowels = "eiéí"
+vowels = hardVowels ++ softVowels
+
+hardToSoft :: Char -> String
+hardToSoft 'c' = "qu"
+hardToSoft 'g' = "gu"
+hardToSoft 'z' = "c"
+hardToSoft x = return x
+
+-- Args: previous char, char
+softToHard :: Char -> Char -> String
+softToHard prev 'c' = if elem prev vowels
+	then "zc"
+	else "z"
+softToHard _ 'g' = "j"
+softToHard _ x = return x
+
+lastLetterRule :: Verb -> String -> String -> Verb
+lastLetterRule orig stem ending = init stem ++ replacement ++ ending where
+	origVowel = orig !! (length orig - 2)
+	newVowel = head ending
+	replacement = if elem origVowel hardVowels && elem newVowel softVowels
+		then hardToSoft $ last stem
+		else if elem origVowel softVowels && elem newVowel hardVowels
+			then softToHard (last $ init stem) $ last stem
+			else return $ last stem
 
 -- (UNIFORM) Stem change handling
 
@@ -207,6 +224,33 @@ stemChangeAsApplied t p ending stemchange = case t of
 		else return
 	Imperfect -> return
 
+-- (INDIVIDUAL) Preterite common patterns
+
+getPreteriteSemiregularForm :: Verb -> Maybe Verb
+getPreteriteSemiregularForm "estar" = Just "estuv"
+getPreteriteSemiregularForm "decir" = Just "dij"
+getPreteriteSemiregularForm "hacer" = Just "hic"
+getPreteriteSemiregularForm "poner" = Just "pus"
+getPreteriteSemiregularForm "suponer" = Just "supus"
+getPreteriteSemiregularForm "saber" = Just "sup"
+getPreteriteSemiregularForm "tener" = Just "tuv"
+getPreteriteSemiregularForm "venir" = Just "vin"
+getPreteriteSemiregularForm "poder" = Just "pud"
+getPreteriteSemiregularForm "querer" = Just "quis"
+getPreteriteSemiregularForm "producir" = Just "produj"
+getPreteriteSemiregularForm "mantener" = Just "mantuv"
+getPreteriteSemiregularForm "traer" = Just "traj"
+getPreteriteSemiregularForm _ = Nothing
+
+isPreteriteSemiregular :: Verb -> Bool
+isPreteriteSemiregular = isJust . getPreteriteSemiregularForm
+
+preteriteSemiregularStem :: Verb -> String
+preteriteSemiregularStem = fromJust . getPreteriteSemiregularForm
+
+preteriteSemiregularEnding :: Person -> String
+preteriteSemiregularEnding = unpack ["e", "iste", "o", "imos", undefined, "ieron"]
+
 -- (INDIVIDUAL) Stem change handling
 
 getStemChange :: Verb -> Maybe StemChange
@@ -224,16 +268,22 @@ getStemChange "calentar" = Just EtoIE
 getStemChange "encerrar" = Just EtoIE
 getStemChange "querer" = Just EtoIE
 getStemChange "sentir" = Just EtoIE
+getStemChange "tener" = Just EtoIE
+getStemChange "venir" = Just EtoIE
+getStemChange "mantener" = Just EtoIE
 getStemChange "entender" = Just EtoIE
 getStemChange "comenzar" = Just EtoIE
+getStemChange "convertir" = Just EtoIE
 -- OtoUE
 getStemChange "dormir" = Just OtoUE
 getStemChange "doler" = Just OtoUE
+getStemChange "poder" = Just OtoUE
 getStemChange "encontrar" = Just OtoUE
 getStemChange "volver" = Just OtoUE
 getStemChange "contar" = Just OtoUE
 getStemChange "recordar" = Just OtoUE
--- UtoUe
+getStemChange "morir" = Just OtoUE
+-- UtoUE
 -- EtoI
 getStemChange "pedir" = Just EtoI
 getStemChange "seguir" = Just EtoI
@@ -249,23 +299,23 @@ irregular "ser" _ = True
 irregular "ir" _ = True
 irregular "ver" _ = True
 irregular _ Imperfect = False
-irregular "estar" _ = True
-irregular "decir" _ = True
-irregular "hacer" _ = True
-irregular "poner" _ = True
-irregular "saber" _ = True
 irregular "dar" _ = True
-irregular "venir" _ = True
-irregular "tener" _ = True
+irregular "hacer" _ = True
+irregular "caer" _ = True
+irregular "oír" _ = True
+irregular "estar" Present = True
+irregular "decir" Present = True
+irregular "saber" Present = True
+irregular "salir" Present = True
 irregular "seguir" Present = True
 irregular "conseguir" Present = True
-irregular "poder" Preterite = True
-irregular "querer" Preterite = True
+irregular "traer" Present = True
 irregular "creer" Preterite = True
-irregular "producir" Preterite = True
+irregular "leer" Preterite = True
 irregular _ _ = False
 
 irregularConjugate :: Verb -> Tense -> Person -> String
+-- all tenses
 irregularConjugate "ser" t = case t of
 	Present -> unpack ["soy", "eres", "es", "somos", "sois", "son"]
 	Preterite -> unpack ["fui", "fuiste", "fue", "fuimos", "fuisteis", "fueron"]
@@ -277,40 +327,36 @@ irregularConjugate "ir" t = case t of
 irregularConjugate "ver" t = case t of
 	Present -> unpack ["veo", "ves", "ve", "vemos", undefined, "ven"]
 	Preterite -> unpack ["vi", "viste", "vio", "vimos", undefined, "vieron"]
-	Imperfect -> regularConjugate "veer" Imperfect
-irregularConjugate "estar" t = case t of
-	Present -> unpack ["estoy", "esta's", "esta'", "estamos", undefined, "esta'n"]
-	Preterite -> unpack ["estuve", "estuviste", "estuvo", "estuvimos", undefined, "estuvieron"]
-irregularConjugate "decir" t = case t of
-	Present -> unpack ["digo", "dices", "dice", "decimos", undefined, "dicen"]
-	Preterite -> unpack ["dije", "dijiste", "dijo", "dijimos", undefined, "dijieron"]
-irregularConjugate "hacer" t = case t of
-	Present -> unpack ["hago", "haces", "hace", "hacemos", undefined, "hacen"]
-	Preterite -> unpack ["hice", "hiciste", "hizo", "hicimos", undefined, "hicieron"]
-irregularConjugate "poner" t = case t of
-	Present -> unpack ["pongo", "pones", "pone", "ponemos", undefined, "ponen"]
-	Preterite -> unpack ["puse", "pusiste", "puso", "pusimos", undefined, "pusieron"]
-irregularConjugate "saber" t = case t of
-	Present -> unpack ["se'", "sabes", "sabe", "sabemos", undefined, "saben"]
-	Preterite -> unpack ["supe", "supiste", "supo", "supimos", undefined, "supieron"]
-irregularConjugate "tener" t = case t of
-	Present -> unpack ["tengo", "tienes", "tiene", "tenemos", undefined, "tienen"]
-	Preterite -> unpack ["tuve", "tuviste", "tuvo", "tuvimos", undefined, "tuvieron"]
-irregularConjugate "venir" t = case t of
-	Present -> unpack ["vengo", "vienes", "viene", "venemos", undefined, "venien"]
-	Preterite -> unpack ["vine'", "viniste", "vino", "vinimos", undefined, "vinieron"]
+	Imperfect -> ("ve" ++) . regularEnding "ver" Imperfect
+-- Present & Preterite
 irregularConjugate "dar" t = case t of
 	Present -> unpack ["doy", "das", "da", "damos", undefined, "dan"]
 	Preterite -> unpack ["di", "diste", "dio", "dimos", undefined, "dieron"]
+irregularConjugate "hacer" t = case t of
+	Present -> unpack ["hago", "haces", "hace", "hacemos", undefined, "hacen"]
+	Preterite -> unpack ["hice", "hiciste", "hizo", "hicimos", undefined, "hicieron"]
+irregularConjugate "caer" t = case t of
+	Present -> unpack ["caigo", "caes", "cae", "caemos", undefined, "caen"]
+	Preterite -> unpack ["cai'", "cai'ste", "oyo'", "oi'mos", undefined, "cayeron"]
+irregularConjugate "oír" t = case t of
+	Present -> unpack ["oigo", "oyes", "oye", "oi'mos", undefined, "oyen"]
+	Preterite -> unpack ["oi'", "oi'ste", "cayo'", "cai'mos", undefined, "oyeron"]
+-- Present
+irregularConjugate "estar" t = case t of
+	Present -> unpack ["estoy", "esta's", "esta'", "estamos", undefined, "esta'n"]
+irregularConjugate "salir" t = case t of
+	Present -> unpack ["salgo", "sales", "sale", "salimos", undefined, "salen"]
+irregularConjugate "decir" t = case t of
+	Present -> unpack ["digo", "dices", "dice", "decimos", undefined, "dicen"]
+irregularConjugate "saber" t = case t of
+	Present -> unpack ["se'", "sabes", "sabe", "sabemos", undefined, "saben"]
 irregularConjugate "seguir" t = case t of
-	Present -> unpack ["sigo", "sigues", "sigue", "siguemos", undefined, "siguen"]
-irregularConjugate "conseguir" t = case t of
-	Present -> unpack ["consigo", "consigues", "consigue", "consiguemos", undefined, "consiguen"]
-irregularConjugate "poder" t = case t of
-	Preterite -> unpack ["pude", "pudiste", "pudo", "pudimos", undefined, "pudieron"]
-irregularConjugate "querer" t = case t of
-	Preterite -> unpack ["quise", "quisiste", "quiso", "quisimos", undefined, "quisieron"]
+	Present -> unpack ["sigo", "sigues", "sigue", "seguimos", undefined, "siguen"]
+irregularConjugate "conseguir" t = ("con" ++) . irregularConjugate "seguir" t
+irregularConjugate "traer" t = case t of
+	Present -> unpack ["traigo", "traes", "trae", "traemos", undefined, "traen"]
+-- Preterite
 irregularConjugate "creer" t = case t of
 	Preterite -> unpack ["crei'", "crei'ste", "creyo'", "crei'mos", undefined, "creyeron"]
-irregularConjugate "producir" t = case t of
-	Preterite -> unpack ["produje", "produjiste", "produjo", "produjimos", undefined, "produjieron"]
+irregularConjugate "leer" t = case t of
+	Preterite -> unpack ["lei'", "lei'ste", "leyo'", "lei'mos", undefined, "leyeron"]
