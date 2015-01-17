@@ -16,10 +16,12 @@ class (Read a, Show a) => Card a where
 data Bucket a = Empty
 			  | Leaf a
 			  | Node Int Int Int (Bucket a) (Bucket a)	-- (numChildren, leftMax, rightMin, left, right)
-	deriving (Show, Read)
 
 type Probability = Double
 type GameState a = ([Bucket a], [Probability])
+
+instance (Show a) => Show (Bucket a) where
+	show = show . flatten
 
 -- Basic functions for Bucket type
 
@@ -47,19 +49,19 @@ bmax (Leaf a) = a
 bmax (Node _ _ _ _ b) = bmax b
 
 secondMaxId :: (Card a) => Bucket a -> Int
-secondMaxId = (!! 1) . reverse . idList
+secondMaxId = getId . (!! 1) . reverse . flatten
 
 bmin :: Bucket a -> a
 bmin (Leaf a) = a
 bmin (Node _ _ _ a _) = bmin a
 
 secondMinId :: (Card a) => Bucket a -> Int
-secondMinId = (!! 1) . idList
+secondMinId = getId . (!! 1) . flatten
 
-idList :: (Card a) => Bucket a -> [Int]
-idList Empty = []
-idList (Leaf a) = [getId a]
-idList (Node _ _ _ a b) = idList a ++ idList b
+flatten :: Bucket a -> [a]
+flatten Empty = []
+flatten (Leaf a) = [a]
+flatten (Node _ _ _ a b) = flatten a ++ flatten b
 
 -- More complex functions for Bucket type
 -- All average time O(log n)
@@ -195,10 +197,11 @@ saveState gs = do
 		then return ()
 		else writeFile filename $ show gs
 
-loadState :: (Card a) => FilePath -> IO (GameState a)
+loadState :: (Read a, Card a) => FilePath -> IO (GameState a)
 loadState fp = do
 	fileContents <- readFile fp
-	return $ read fileContents
+	let partialRead = read fileContents :: (Read a) => ([[a]], [Probability])
+	return (map buildBucket $ fst partialRead, snd partialRead)
 
 promptProbabilities :: IO [Probability]
 promptProbabilities = do
