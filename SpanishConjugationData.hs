@@ -30,7 +30,7 @@ data StemChange = EtoIE
 				| EtoI
 
 knownPersons = [Yo, Tu, El, Nosotros, Ellos]
-knownVerbs = sort ["ser", "estar", "tener", "hacer", "poder", "decir", "ir", "dar", "saber", "querer", "llegar", "pasar", "deber", "poner", "parecer", "quedar", "creer", "hablar", "llevar", "dejar", "seguir", "encontrar", "llamar", "venir", "pensar", "salir", "volver", "tomar", "conocer", "vivir", "sentir", "tratar", "mirar", "contar", "empezar", "esperar", "buscar", "existir", "entrar", "trabajar", "escribir", "perder", "producir", "ocurrir", "entender", "pedir", "recibir", "recordar", "terminar", "permitir", "aperecer", "conseguir", "comenzar", "servir", "sacar", "necesitar", "mantener", "resultar", "leer", "caer", "cambiar", "presentar", "crear", "abrir", "considerar", "oír", "acabar", "convertir", "ganar", "formar", "traer", "partir", "morir", "aceptar", "realizar", "suponer", "comprender", "lograr", "explicar"]
+knownVerbs = sort ["ser", "estar", "tener", "hacer", "poder", "decir", "ir", "dar", "saber", "querer", "llegar", "pasar", "deber", "poner", "parecer", "quedar", "creer", "hablar", "llevar", "dejar", "seguir", "encontrar", "llamar", "venir", "pensar", "salir", "volver", "tomar", "conocer", "vivir", "sentir", "tratar", "mirar", "contar", "empezar", "esperar", "buscar", "existir", "entrar", "trabajar", "escribir", "perder", "producir", "ocurrir", "entender", "pedir", "recibir", "recordar", "terminar", "permitir", "aperecer", "conseguir", "comenzar", "servir", "sacar", "necesitar", "mantener", "resultar", "leer", "caer", "cambiar", "presentar", "crear", "abrir", "considerar", "oír", "acabar", "convertir", "ganar", "formar", "traer", "partir", "morir", "aceptar", "realizar", "suponer", "comprender", "lograr", "explicar", "preguntar", "tocar", "reconocer", "estudiar", "alcanzar", "nacer", "dirigir", "correr", "utilizar", "pagar", "ayudar", "gustar", "jugar", "escuchar", "cumplir", "ofrecer", "descrubir", "lavantar", "intentar", "usar", "olvidar", "cubrir", "gritar", "comer", "almorzar", "desayunar", "cenar", "bailar", "cantar", "subir", "aburrir"]
 
 -- Conjugation data is stored as lists by person, so unpack to functions
 unpack :: [String] -> Person -> String
@@ -74,7 +74,9 @@ getStemChange "volver" = Just OtoUE
 getStemChange "contar" = Just OtoUE
 getStemChange "recordar" = Just OtoUE
 getStemChange "morir" = Just OtoUE
+getStemChange "almorzar" = Just OtoUE
 -- UtoUE
+getStemChange "jugar" = Just UtoUE
 -- EtoI
 getStemChange "pedir" = Just EtoI
 getStemChange "seguir" = Just EtoI
