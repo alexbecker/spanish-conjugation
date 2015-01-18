@@ -3,31 +3,7 @@ module SpanishConjugationData where
 import Data.Maybe
 import Data.List
 import SpanishParse
-
-type Verb = String
-
-data Tense = Present
-		   | PresentProgressive
-		   | Preterite
-		   | Imperfect
-		   | Subjunctive
-		   | Future
-		   | Conditional
-		   | Command
-	deriving (Read, Show, Eq)
-
-data Person = Yo
-			| Tu
-			| El
-			| Nosotros
-			| Vosotros
-			| Ellos
-	deriving (Read, Show, Eq)
-
-data StemChange = EtoIE
-				| OtoUE
-				| UtoUE
-				| EtoI
+import SpanishConjugationTypes
 
 knownPersons = [Yo, Tu, El, Nosotros, Ellos]
 knownVerbs = sort ["ser", "estar", "tener", "hacer", "poder", "decir", "ir", "dar", "saber", "querer", "llegar", "pasar", "deber", "poner", "parecer", "quedar", "creer", "hablar", "llevar", "dejar", "seguir", "encontrar", "llamar", "venir", "pensar", "salir", "volver", "tomar", "conocer", "vivir", "sentir", "tratar", "mirar", "contar", "empezar", "esperar", "buscar", "existir", "entrar", "trabajar", "escribir", "perder", "producir", "ocurrir", "entender", "pedir", "recibir", "recordar", "terminar", "permitir", "aperecer", "conseguir", "comenzar", "servir", "sacar", "necesitar", "mantener", "resultar", "leer", "caer", "cambiar", "presentar", "crear", "abrir", "considerar", "oír", "acabar", "convertir", "ganar", "formar", "traer", "partir", "morir", "aceptar", "realizar", "suponer", "comprender", "lograr", "explicar", "preguntar", "tocar", "reconocer", "estudiar", "alcanzar", "nacer", "dirigir", "correr", "utilizar", "pagar", "ayudar", "gustar", "jugar", "escuchar", "cumplir", "ofrecer", "descrubir", "lavantar", "intentar", "usar", "olvidar", "cubrir", "gritar", "comer", "almorzar", "desayunar", "cenar", "bailar", "cantar", "subir", "aburrir"]
@@ -148,7 +124,7 @@ irregularConjugate "hacer" t = case t of
 	Preterite -> unpack ["hice", "hiciste", "hizo", "hicimos", undefined, "hicieron"]
 irregularConjugate "caer" t = case t of
 	Present -> unpack ["caigo", "caes", "cae", "caemos", undefined, "caen"]
-	Preterite -> unpack ["cai'", "cai'ste", "oyo'", "oi'mos", undefined, "cayeron"]
+	Preterite -> unpack ["cai'", "cai'ste", "cayo'", "cai'mos", undefined, "cayeron"]
 irregularConjugate "oír" t = case t of
 	Present -> unpack ["oigo", "oyes", "oye", "oi'mos", undefined, "oyen"]
 	Preterite -> unpack ["oi'", "oi'ste", "cayo'", "cai'mos", undefined, "oyeron"]

@@ -171,9 +171,7 @@ tryCard gs = do
 						return gs
 
 playGame :: (Card a) => GameState a -> IO ()
-playGame gs = do
-	gs' <- tryCard gs
-	playGame gs'
+playGame gs = tryCard gs >>= playGame
 
 playGamePrompt :: (Card a) => GameState a -> IO ()
 playGamePrompt gs = do
@@ -233,22 +231,16 @@ instance Card TestCard where
 		return $ response == 'y'
 
 testInsert :: IO (Bucket TestCard)
-testInsert = do
-	foldM (flip insert) Empty $ map TestCard [1,8,7,4,2,10,5,6,3,9]
+testInsert = foldM (flip insert) Empty $ map TestCard [1,8,7,4,2,10,5,6,3,9]
 
 testDelete :: Int -> IO (Bucket TestCard)
-testDelete n = do 
-	x <- testInsert
-	return $ delete (TestCard n) x
+testDelete n = testInsert >>= return . delete (TestCard n)
 
 testGame :: Int -> GameState TestCard
 testGame n = buildGameState (map TestCard [1..n]) [0.75, 0.2, 0.05]
 
 verbosePlayGame :: (Card a) => GameState a -> IO ()
-verbosePlayGame gs = do
-	putStrLn $ show gs
-	gs' <- tryCard gs
-	verbosePlayGame gs'
+verbosePlayGame gs = putStrLn (show gs) >> tryCard gs >>= verbosePlayGame
 
 -- Deletes have been causing a bug
 
@@ -264,6 +256,4 @@ instance Card RandCard where
 			else False
 
 testDeleteBug :: Int -> IO ()
-testDeleteBug n = do
-	let gs = buildGameState (map RandCard [1..n]) [0.5, 0.5]
-	verbosePlayGame gs
+testDeleteBug n = verbosePlayGame $ buildGameState (map RandCard [1..n]) [0.5, 0.5]

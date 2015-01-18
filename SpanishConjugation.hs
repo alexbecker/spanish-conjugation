@@ -8,6 +8,7 @@ import SpacedRepetition
 import SpanishParse
 import ImmediateIO
 import SpanishConjugationData
+import SpanishConjugationTypes
 
 data VerbCard = VerbCard Int Verb Tense
 	deriving (Show, Read, Eq)
