@@ -1,12 +1,10 @@
 module SpanishConjugationData where
 
-import Data.Maybe
 import Data.List
-import SpanishParse
 import SpanishConjugationTypes
 
 knownPersons = [Yo, Tu, El, Nosotros, Ellos]
-knownVerbs = sort ["ser", "estar", "tener", "hacer", "poder", "decir", "ir", "dar", "saber", "querer", "llegar", "pasar", "deber", "poner", "parecer", "quedar", "creer", "hablar", "llevar", "dejar", "seguir", "encontrar", "llamar", "venir", "pensar", "salir", "volver", "tomar", "conocer", "vivir", "sentir", "tratar", "mirar", "contar", "empezar", "esperar", "buscar", "existir", "entrar", "trabajar", "escribir", "perder", "producir", "ocurrir", "entender", "pedir", "recibir", "recordar", "terminar", "permitir", "aperecer", "conseguir", "comenzar", "servir", "sacar", "necesitar", "mantener", "resultar", "leer", "caer", "cambiar", "presentar", "crear", "abrir", "considerar", "oír", "acabar", "convertir", "ganar", "formar", "traer", "partir", "morir", "aceptar", "realizar", "suponer", "comprender", "lograr", "explicar", "preguntar", "tocar", "reconocer", "estudiar", "alcanzar", "nacer", "dirigir", "correr", "utilizar", "pagar", "ayudar", "gustar", "jugar", "escuchar", "cumplir", "ofrecer", "descrubir", "lavantar", "intentar", "usar", "olvidar", "cubrir", "gritar", "comer", "almorzar", "desayunar", "cenar", "bailar", "cantar", "subir", "aburrir"]
+knownVerbs = sort ["ser", "estar", "tener", "hacer", "poder", "decir", "ir", "dar", "saber", "querer", "llegar", "pasar", "deber", "poner", "parecer", "quedar", "creer", "hablar", "llevar", "dejar", "seguir", "encontrar", "llamar", "venir", "pensar", "salir", "volver", "tomar", "conocer", "vivir", "sentir", "tratar", "mirar", "contar", "empezar", "esperar", "buscar", "existir", "entrar", "trabajar", "escribir", "perder", "producir", "ocurrir", "entender", "pedir", "recibir", "recordar", "terminar", "permitir", "aperecer", "conseguir", "comenzar", "servir", "sacar", "necesitar", "mantener", "resultar", "leer", "caer", "cambiar", "presentar", "crear", "abrir", "considerar", "oír", "acabar", "convertir", "ganar", "formar", "traer", "partir", "morir", "aceptar", "realizar", "suponer", "comprender", "lograr", "explicar", "preguntar", "tocar", "reconocer", "estudiar", "alcanzar", "nacer", "dirigir", "correr", "utilizar", "pagar", "ayudar", "gustar", "jugar", "escuchar", "cumplir", "ofrecer", "descrubir", "lavantar", "intentar", "usar", "olvidar", "cubrir", "gritar", "comer", "almorzar", "desayunar", "cenar", "bailar", "cantar", "subir", "aburrir", "chocar"]
 
 -- Conjugation data is stored as lists by person, so unpack to functions
 unpack :: [String] -> Person -> String

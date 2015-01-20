@@ -1,9 +1,9 @@
 -- Implements bucket-based spaced repetition
 module SpacedRepetition where
 
-import Data.Tuple
 import Data.Maybe
 import Data.List (find, findIndex, (!!))
+import Data.Function
 import System.Random
 import Control.Monad
 import ImmediateIO
@@ -129,11 +129,11 @@ drawRand (Node i _ _ x y) = do
 buildBucket :: (Card a) => [a] -> Bucket a
 buildBucket [] = Empty
 buildBucket [c] = Leaf c
-buildBucket cs = Node (numChildren left + numChildren right) (getId $ bmax left) (getId $ bmin right) left right
+buildBucket cs = Node (numChildren leftSide + numChildren rightSide) (getId $ bmax leftSide) (getId $ bmin rightSide) leftSide rightSide
 	where
 		splitcs = splitAt (quot (length cs) 2) cs
-		left = buildBucket $ fst splitcs
-		right = buildBucket $ snd splitcs
+		leftSide = buildBucket $ fst splitcs
+		rightSide = buildBucket $ snd splitcs
 
 -- Functions for playing the game
 
@@ -217,6 +217,12 @@ maybeLoadState = do
 			state <- loadState savefile
 			return $ Just state
 		else return Nothing
+
+-- update GameState with more cards for the first bucket
+updateState :: (Card a) => GameState a -> [a] -> GameState a
+updateState gs newCards = (buildBucket (flatten (head buckets) ++ newCards) : tail buckets, probs) where
+	buckets = fst gs
+	probs = snd gs
 
 -- Test functions
 
